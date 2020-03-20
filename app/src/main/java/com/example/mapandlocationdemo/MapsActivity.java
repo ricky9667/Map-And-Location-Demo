@@ -8,11 +8,14 @@ import androidx.fragment.app.FragmentActivity;
 import android.Manifest;
 import android.content.Context;
 import android.content.pm.PackageManager;
+import android.location.Address;
+import android.location.Geocoder;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.Build;
 import android.os.Bundle;
+import android.util.Log;
 import android.widget.Toast;
 
 import com.google.android.gms.maps.CameraUpdateFactory;
@@ -21,6 +24,10 @@ import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MarkerOptions;
+
+import java.io.IOException;
+import java.util.List;
+import java.util.Locale;
 
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback {
 
@@ -71,6 +78,45 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             @Override
             public void onLocationChanged(Location location) {
                 Toast.makeText(MapsActivity.this, location.toString(), Toast.LENGTH_LONG).show();
+                mMap.clear();
+                LatLng userLocation = new LatLng(location.getLatitude(), location.getLongitude());
+                mMap.addMarker(new MarkerOptions().position(userLocation).title("Your Location"));
+                mMap.moveCamera(CameraUpdateFactory.newLatLng(userLocation));
+
+                // get address from user
+                Geocoder geocoder = new Geocoder(getApplicationContext(), Locale.getDefault());
+                try {
+                    List<Address> listAddresses = geocoder.getFromLocation(location.getLatitude(), location.getLongitude(), 1);
+                    if (listAddresses != null && listAddresses.size() > 0) {
+                        Log.i("PlaceInfo", listAddresses.get(0).toString());
+                        String address = "";
+
+                        // street
+                        if (listAddresses.get(0).getThoroughfare() != null) {
+                            address += listAddresses.get(0).getThoroughfare() + " ";
+                        }
+
+                        // city
+                        if (listAddresses.get(0).getAdminArea() != null) {
+                            address += listAddresses.get(0).getAdminArea() + " ";
+                        }
+
+                        // postal code
+                        if (listAddresses.get(0).getPostalCode() != null) {
+                            address += listAddresses.get(0).getPostalCode() + " ";
+                        }
+
+                        // state
+                        if (listAddresses.get(0).getLocality() != null) {
+                            address += listAddresses.get(0).getLocality() + " ";
+                        }
+
+                        Toast.makeText(MapsActivity.this, address, Toast.LENGTH_SHORT).show();
+                        Log.i("Address", address);
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
             }
 
             @Override
@@ -94,6 +140,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 // request code is used when there are multiple permissions required
             } else {
                 manager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 0, listener);
+                mMap.clear();
 
                 Location lastLocation = manager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
                 LatLng userLocation = new LatLng(lastLocation.getLatitude(), lastLocation.getLongitude());
